@@ -1,0 +1,15 @@
+services:
+  # postgress
+  db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: ilham
+      POSTGRES_PASSWORD: Rahasia123
+      POSTGRES_DB: db_todo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
