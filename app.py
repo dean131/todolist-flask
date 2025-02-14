@@ -1,7 +1,8 @@
-from flask import Flask
+from flask import Flask, jsonify
 from src.models.todo import db
 from src.controllers.todo_controller import todo_blueprint
 from dotenv import load_dotenv
+from src.utils.errors import AppError
 import os
 
 
@@ -18,6 +19,12 @@ def create_app():
         db.create_all()
 
     app.register_blueprint(todo_blueprint)
+
+    @app.errorhandler(AppError)
+    def handle_app_error(error):
+        response = {"error": True, "message": error.message}
+        return jsonify(response), error.status_code
+
     return app
 
 
