@@ -1,34 +1,43 @@
 from flask import Flask, jsonify
-from src.models.todo import db
-from src.controllers.todo_controller import todo_blueprint
-from dotenv import load_dotenv
-from src.utils.errors import AppError
-import os
+from config import Config
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from werkzeug.exceptions import HTTPException
+from container import db
+
+migrate = Migrate()
 
 
 def create_app():
-    load_dotenv()
     app = Flask(__name__)
-
-    db_url = os.getenv("DATABASE_URL", "sqlite:///default.db")
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config.from_object(Config)
 
     db.init_app(app)
-    with app.app_context():
-        db.create_all()
+    migrate.init_app(app, db)
 
-    app.register_blueprint(todo_blueprint)
+    # Registrasi blueprint
+    from controllers.auth_controller import auth_bp
+    from controllers.todo_controller import todo_bp
 
-    @app.errorhandler(AppError)
-    def handle_app_error(error):
-        response = {"error": True, "message": error.message}
-        return jsonify(response), error.status_code
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(todo_bp, url_prefix="/todos")
+
+    # Handler error HTTPException
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(e):
+        response = e.get_response()
+        response.data = jsonify({"error": True, "message": e.description}).data
+        response.content_type = "application/json"
+        return response
+
+    # Handler error umum
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        return jsonify({"error": True, "message": str(e)}), 500
 
     return app
 
 
 if __name__ == "__main__":
-    flask_app = create_app()
-    APP_PORT = os.getenv("APP_PORT", 5000)
-    flask_app.run(debug=True, port=APP_PORT)
+    app = create_app()
+    app.run(debug=True, port=3000)
